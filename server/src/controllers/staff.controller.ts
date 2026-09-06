@@ -170,18 +170,47 @@ export const createStaffAccount = async (req: AuthRequest, res: Response) => {
 };
 
 /**
+ * Helper to safely find a staff account by numeric ID (BigInt), string ID, or username
+ */
+const findStaffAccount = async (idParam: string) => {
+    if (!idParam) return null;
+
+    let targetId: any = idParam;
+    try {
+        targetId = BigInt(idParam);
+    } catch {
+        // Keep original string if BigInt conversion fails
+    }
+
+    try {
+        const found = await prisma.staffAccount.findFirst({
+            where: {
+                OR: [
+                    { id: targetId },
+                    { username: idParam.toLowerCase().trim() },
+                ],
+            },
+        });
+        return found;
+    } catch (err: any) {
+        console.error('[Staff Controller] findStaffAccount error:', err.message);
+        return null;
+    }
+};
+
+/**
  * PUT /api/staff/:id
  * Update staff account details
  * @access Admin only
  */
 export const updateStaffAccount = async (req: AuthRequest, res: Response) => {
     try {
-        const id = Array.isArray(req.params.id) 
+        const rawId = Array.isArray(req.params.id) 
             ? req.params.id[0] 
             : req.params.id;
         const { username, role, displayName, isActive, specialty, experience, bio } = req.body;
 
-        if (!id) {
+        if (!rawId) {
             return res.status(400).json({
                 success: false,
                 error: 'Valid staff ID is required',
@@ -214,10 +243,8 @@ export const updateStaffAccount = async (req: AuthRequest, res: Response) => {
         // Normalize role to uppercase for consistency with database enum
         const formattedRole = role.toUpperCase();
 
-        // Check if staff exists
-        const existingStaff = await prisma.staffAccount.findUnique({
-            where: { id },
-        });
+        // Check if staff exists safely via BigInt or username
+        const existingStaff = await findStaffAccount(rawId);
 
         if (!existingStaff) {
             return res.status(404).json({
@@ -240,9 +267,9 @@ export const updateStaffAccount = async (req: AuthRequest, res: Response) => {
             }
         }
 
-        // Update staff account
+        // Update staff account using primary key BigInt
         const updatedStaff = await prisma.staffAccount.update({
-            where: { id },
+            where: { id: existingStaff.id },
             data: {
                 username: username.toLowerCase().trim(),
                 role: formattedRole,
@@ -307,12 +334,12 @@ export const updateStaffAccount = async (req: AuthRequest, res: Response) => {
  */
 export const resetStaffPassword = async (req: AuthRequest, res: Response) => {
     try {
-        const id = Array.isArray(req.params.id) 
+        const rawId = Array.isArray(req.params.id) 
             ? req.params.id[0] 
             : req.params.id;
         const { newPassword } = req.body;
 
-        if (!id) {
+        if (!rawId) {
             return res.status(400).json({
                 success: false,
                 error: 'Valid staff ID is required',
@@ -334,9 +361,7 @@ export const resetStaffPassword = async (req: AuthRequest, res: Response) => {
         }
 
         // Check if staff exists
-        const existingStaff = await prisma.staffAccount.findUnique({
-            where: { id },
-        });
+        const existingStaff = await findStaffAccount(rawId);
 
         if (!existingStaff) {
             return res.status(404).json({
@@ -350,7 +375,7 @@ export const resetStaffPassword = async (req: AuthRequest, res: Response) => {
 
         // Update password
         await prisma.staffAccount.update({
-            where: { id },
+            where: { id: existingStaff.id },
             data: {
                 passwordHash,
                 updatedAt: new Date(),
@@ -377,12 +402,12 @@ export const resetStaffPassword = async (req: AuthRequest, res: Response) => {
  */
 export const toggleStaffStatus = async (req: AuthRequest, res: Response) => {
     try {
-        const id = Array.isArray(req.params.id) 
+        const rawId = Array.isArray(req.params.id) 
             ? req.params.id[0] 
             : req.params.id;
         const { isActive } = req.body;
 
-        if (!id) {
+        if (!rawId) {
             return res.status(400).json({
                 success: false,
                 error: 'Valid staff ID is required',
@@ -390,9 +415,7 @@ export const toggleStaffStatus = async (req: AuthRequest, res: Response) => {
         }
 
         // Check if staff exists
-        const existingStaff = await prisma.staffAccount.findUnique({
-            where: { id },
-        });
+        const existingStaff = await findStaffAccount(rawId);
 
         if (!existingStaff) {
             return res.status(404).json({
@@ -423,7 +446,7 @@ export const toggleStaffStatus = async (req: AuthRequest, res: Response) => {
 
         // Update status
         const updatedStaff = await prisma.staffAccount.update({
-            where: { id },
+            where: { id: existingStaff.id },
             data: {
                 isActive: newStatus,
                 updatedAt: new Date(),
@@ -461,11 +484,11 @@ export const toggleStaffStatus = async (req: AuthRequest, res: Response) => {
  */
 export const deleteStaffAccount = async (req: AuthRequest, res: Response) => {
     try {
-        const id = Array.isArray(req.params.id) 
+        const rawId = Array.isArray(req.params.id) 
             ? req.params.id[0] 
             : req.params.id;
 
-        if (!id) {
+        if (!rawId) {
             return res.status(400).json({
                 success: false,
                 error: 'Valid staff ID is required',
@@ -473,9 +496,7 @@ export const deleteStaffAccount = async (req: AuthRequest, res: Response) => {
         }
 
         // Check if staff exists
-        const existingStaff = await prisma.staffAccount.findUnique({
-            where: { id },
-        });
+        const existingStaff = await findStaffAccount(rawId);
 
         if (!existingStaff) {
             return res.status(404).json({
@@ -514,7 +535,7 @@ export const deleteStaffAccount = async (req: AuthRequest, res: Response) => {
 
         // Delete staff account
         await prisma.staffAccount.delete({
-            where: { id },
+            where: { id: existingStaff.id },
         });
 
         return res.json({
