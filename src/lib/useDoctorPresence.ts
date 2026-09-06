@@ -59,14 +59,24 @@ export function useDoctorsPresence() {
       }
 
       if (data && data.length > 0) {
-        // Attempt to fetch profile info from doctor table in Supabase
+        // Attempt to fetch profile info from doctors (plural) or doctor table in Supabase
         let profilesMap: Record<string, any> = {};
         try {
           const usernames = data.map((d: any) => d.username);
-          const { data: profData } = await supabase
-            .from("doctor")
+          let { data: profData, error: profError } = await supabase
+            .from("doctors")
             .select("username, specialty, experience, bio, is_available")
             .in("username", usernames);
+
+          if (profError || !profData || profData.length === 0) {
+            const fallback = await supabase
+              .from("doctor")
+              .select("username, specialty, experience, bio, is_available")
+              .in("username", usernames);
+            if (fallback.data && fallback.data.length > 0) {
+              profData = fallback.data;
+            }
+          }
 
           if (profData && profData.length > 0) {
             profData.forEach((p: any) => {
@@ -82,13 +92,15 @@ export function useDoctorsPresence() {
         const photos = ["/doctor1.jpg", "/doctor2.jpg", "/doctor3.jpg"];
         const doctorsFromDB = data.map((doc: any, i: number) => {
           const prof = profilesMap[doc.username?.toLowerCase()] || {};
+          const experienceVal = prof.experience || doc.experience || (doc.raw_user_meta_data?.experience);
+
           return {
             id: doc.id.toString(),
             username: doc.username,
             name: doc.display_name || doc.username,
-            specialty: prof.specialty || "General Practice",
-            experience: prof.experience || "5+ years experience",
-            bio: prof.bio || "Specialist physician at Dr. Amanuel Hospital.",
+            specialty: prof.specialty || doc.specialty || "General Practice",
+            experience: experienceVal || "5+ years experience",
+            bio: prof.bio || doc.bio || "Specialist physician at Dr. Amanuel Hospital.",
             isOnline: Boolean(doc.is_online),
             isAvailable: prof.is_available ?? true,
             photo: photos[i % photos.length],
