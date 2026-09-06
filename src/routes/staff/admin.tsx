@@ -151,11 +151,11 @@ function AdminDashboardPage() {
   const totalStaff = staffAccounts?.length ?? 0;
   const activeStaff = staffAccounts?.filter((s) => s.isActive).length ?? 0;
   const inactiveStaff = staffAccounts?.filter((s) => !s.isActive).length ?? 0;
-  const receptionCount = staffAccounts?.filter((s) => s.role === "reception").length ?? 0;
-  const cashierCount = staffAccounts?.filter((s) => s.role === "cashier").length ?? 0;
-  const doctorCount = staffAccounts?.filter((s) => s.role === "doctor").length ?? 0;
-  const labCount = staffAccounts?.filter((s) => s.role === "laboratory").length ?? 0;
-  const pharmacyCount = staffAccounts?.filter((s) => s.role === "pharmacy").length ?? 0;
+  const receptionCount = staffAccounts?.filter((s) => s.role?.toLowerCase() === "reception").length ?? 0;
+  const cashierCount = staffAccounts?.filter((s) => s.role?.toLowerCase() === "cashier").length ?? 0;
+  const doctorCount = staffAccounts?.filter((s) => s.role?.toLowerCase() === "doctor").length ?? 0;
+  const labCount = staffAccounts?.filter((s) => s.role?.toLowerCase() === "laboratory").length ?? 0;
+  const pharmacyCount = staffAccounts?.filter((s) => s.role?.toLowerCase() === "pharmacy").length ?? 0;
 
   // Filter staff accounts with safe navigation
   const filteredStaff = (staffAccounts || []).filter((staff) => {
@@ -292,7 +292,7 @@ function AdminDashboardPage() {
   };
 
   const getRoleBadgeColor = (role: string) => {
-    switch (role) {
+    switch (role?.toLowerCase()) {
       case "admin":
         return "bg-purple-500/10 text-purple-600 border-purple-500/20";
       case "doctor":
