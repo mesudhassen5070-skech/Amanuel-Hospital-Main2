@@ -17,6 +17,7 @@ import {
   Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious,
 } from "@/components/ui/carousel";
 import { services, doctors } from "@/lib/site-data";
+import { useDoctorsPresence } from "@/lib/useDoctorPresence";
 import { useLanguage } from "@/lib/language-context";
 import { t, translations, translatedFaqs, translatedTestimonials, translatedStats } from "@/lib/translations";
 import { cn } from "@/lib/utils";
@@ -164,9 +165,10 @@ function DoctorsPreview() {
   const { lang } = useLanguage();
   const tr = translations.sections;
   const docTr = translations.doctors;
+  const { doctors: doctorsList, loading } = useDoctorsPresence();
 
   return (
-    <section className="py-20 md:py-28 bg-muted/30">
+    <section className="py-20 md:py-28">
       <div className="mx-auto max-w-7xl px-4 lg:px-8">
         <Reveal>
           <SectionHeading
@@ -177,49 +179,59 @@ function DoctorsPreview() {
         </Reveal>
         {/* Replace AI card grid with clean technical layout */}
         <div className="mt-12 space-y-8">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {doctors.slice(0, 3).map((doc, i) => (
-              <Reveal key={doc.id} delay={i * 60}>
-                <div className="sharp-card technical-focus bg-card border rounded-xl p-6">
-                  <div className="aspect-square overflow-hidden rounded-lg mb-4 border border-border">
-                    <img
-                      src={doc.photo}
-                      alt={`Dr. ${doc.name}`}
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = "/doctor1.jpg";
-                      }}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-display font-semibold text-lg">Dr. {doc.name}</h3>
-                      <span className={cn(
-                        "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium",
-                        doc.isOnline
-                          ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
-                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
-                      )}>
-                        <span className={cn("w-1.5 h-1.5 rounded-full", doc.isOnline ? "bg-emerald-500 animate-pulse" : "bg-slate-400")} />
-                        {doc.isOnline ? "Online" : "Offline"}
-                      </span>
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-slate-500 font-medium animate-pulse">Loading doctors...</p>
+            </div>
+          ) : doctorsList.length === 0 ? (
+            <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
+              <p className="text-slate-500 dark:text-slate-400 font-medium">No doctors currently listed</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {doctorsList.slice(0, 3).map((doc, i) => (
+                <Reveal key={doc.id} delay={i * 60}>
+                  <div className="sharp-card technical-focus bg-card border rounded-xl p-6">
+                    <div className="aspect-square overflow-hidden rounded-lg mb-4 border border-border">
+                      <img
+                        src={doc.photo || "/doctor1.jpg"}
+                        alt={doc.name}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/doctor1.jpg";
+                        }}
+                      />
                     </div>
-                    <p className="text-sm text-primary font-medium">{doc.specialty}</p>
-                    <p className="text-xs text-muted-foreground mono-technical">{doc.experience}</p>
-                    <div className="flex items-center gap-1 pt-2">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm font-medium mono-technical">4.9</span>
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-display font-semibold text-lg">Dr. {doc.name.replace(/^Dr\.\s*/, '')}</h3>
+                        <span className={cn(
+                          "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium",
+                          doc.isOnline
+                            ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                        )}>
+                          <span className={cn("w-1.5 h-1.5 rounded-full", doc.isOnline ? "bg-emerald-500 animate-pulse" : "bg-slate-400")} />
+                          {doc.isOnline ? "Online" : "Offline"}
+                        </span>
+                      </div>
+                      <p className="text-sm text-primary font-medium">{doc.specialty || 'General Practice'}</p>
+                      <p className="text-xs text-muted-foreground mono-technical">{doc.experience || '5+ years experience'}</p>
+                      <div className="flex items-center gap-1 pt-2">
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        <span className="text-sm font-medium mono-technical">4.9</span>
+                      </div>
+                      <Button asChild variant="outline" className="w-full mt-4 rounded-xl precise-button">
+                        <Link to="/booking">
+                          {t(docTr.bookAppt, lang)}
+                        </Link>
+                      </Button>
                     </div>
-                    <Button asChild variant="outline" className="w-full mt-4 rounded-xl precise-button">
-                      <Link to="/booking">
-                        {t(docTr.bookAppt, lang)}
-                      </Link>
-                    </Button>
                   </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
+                </Reveal>
+              ))}
+            </div>
+          )}
           
           {/* Technical CTA strip */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 sharp-card bg-card border rounded-xl">

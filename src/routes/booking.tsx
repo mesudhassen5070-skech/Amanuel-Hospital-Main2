@@ -18,6 +18,7 @@ import { t } from "@/lib/translations";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { doctors } from "@/lib/site-data";
+import { useDoctorsPresence } from "@/lib/useDoctorPresence";
 import { NotificationPermissionBanner } from "@/components/NotificationPermissionBanner";
 
 // Payment method mapping: UI value → database value
@@ -69,6 +70,7 @@ function BookingPage() {
   const { setBooking } = useBooking();
   const { lang } = useLanguage();
   const navigate = useNavigate();
+  const { doctors: doctorsList } = useDoctorsPresence();
 
   const [form, setForm] = useState({
     fullName: "",
@@ -428,11 +430,15 @@ function BookingPage() {
                       <SelectValue placeholder="Choose a doctor" />
                     </SelectTrigger>
                     <SelectContent>
-                      {doctors.map((doctor) => (
-                        <SelectItem key={doctor.id} value={doctor.id}>
-                          {doctor.name} - {doctor.specialty}
-                        </SelectItem>
-                      ))}
+                      {doctorsList.length === 0 ? (
+                        <SelectItem value="general">Hospital Duty Specialist / General Doctor</SelectItem>
+                      ) : (
+                        doctorsList.map((doctor) => (
+                          <SelectItem key={doctor.id} value={doctor.id.toString()}>
+                            Dr. {doctor.name.replace(/^Dr\.\s*/, '')} - {doctor.specialty || 'General Practice'}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   {errors.doctor && (

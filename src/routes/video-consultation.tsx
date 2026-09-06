@@ -3,9 +3,9 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { PageHero } from "@/components/site/PageHero";
 import { Reveal } from "@/components/site/Reveal";
 import { Button } from "@/components/ui/button";
-import { doctors } from "@/lib/site-data";
+import { useDoctorsPresence } from "@/lib/useDoctorPresence";
 import { useLanguage } from "@/lib/language-context";
-import { t, translations, translatedDoctors } from "@/lib/translations";
+import { t, translations } from "@/lib/translations";
 import { Video, X, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AvailableDoctorsModal } from "@/components/telemedicine/AvailableDoctorsModal";
@@ -28,19 +28,7 @@ function VideoConsultationPage() {
   const { lang } = useLanguage();
   const tr = translations.doctors;
   const [videoModalOpen, setVideoModalOpen] = useState(false);
-
-  // Merge translated specialty/experience with photo from site-data
-  const translatedList = translatedDoctors[lang].map((d, i) => ({
-    ...d,
-    id: (i + 1).toString(),
-    name:          doctors[i].name,
-    photo:         doctors[i].photo,
-    availableToday: doctors[i].availableToday,
-    isOnline:       doctors[i].isOnline,
-  }));
-
-  // STRICT FILTER: Only include doctors who are currently logged in / online
-  const onlineDoctors = translatedList.filter((doc) => doc.isOnline === true);
+  const { onlineDoctors } = useDoctorsPresence();
 
   return (
     <SiteLayout>
@@ -71,7 +59,7 @@ function VideoConsultationPage() {
                         </div>
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <h2 className="font-bold text-lg text-slate-900 dark:text-white">Dr. {doctor.name}</h2>
+                            <h2 className="font-bold text-lg text-slate-900 dark:text-white">Dr. {doctor.name.replace(/^Dr\.\s*/, '')}</h2>
                             <span className="flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold rounded-full">
                               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                               Online

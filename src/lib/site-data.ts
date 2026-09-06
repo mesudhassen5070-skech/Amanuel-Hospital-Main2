@@ -107,62 +107,7 @@ export interface Doctor {
   photo: string;
 }
 
-export const doctors: Doctor[] = [
-  {
-    id: "1",
-    name: "Dr. Amanuel Kassa",
-    specialty: "Cardiologist",
-    experience: 15,
-    availableToday: true,
-    isOnline: false,
-    photo: "/doctor1.jpg",
-  },
-  {
-    id: "2",
-    name: "Dr. Tigist Haile",
-    specialty: "Pediatrician",
-    experience: 12,
-    availableToday: true,
-    isOnline: false,
-    photo: "/doctor2.jpg",
-  },
-  {
-    id: "3",
-    name: "Dr. Bekele Gerba",
-    specialty: "Orthopedic Surgeon",
-    experience: 18,
-    availableToday: false,
-    isOnline: false,
-    photo: "/doctor3.jpg",
-  },
-  {
-    id: "4",
-    name: "Dr. Selamawit Tadesse",
-    specialty: "Neurologist",
-    experience: 10,
-    availableToday: true,
-    isOnline: false,
-    photo: "/doctor1.jpg",
-  },
-  {
-    id: "5",
-    name: "Dr. Kifle Demissie",
-    specialty: "Dermatologist",
-    experience: 8,
-    availableToday: true,
-    isOnline: false,
-    photo: "/doctor2.jpg",
-  },
-  {
-    id: "6",
-    name: "Dr. Almaz Bekele",
-    specialty: "Gynecologist",
-    experience: 14,
-    availableToday: false,
-    isOnline: false,
-    photo: "/doctor3.jpg",
-  },
-];
+export const doctors: Doctor[] = [];
 
 export interface Department {
   name: string;
