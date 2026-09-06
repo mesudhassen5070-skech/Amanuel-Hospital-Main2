@@ -23,7 +23,7 @@ export const getAllStaffAccounts = async (req: AuthRequest, res: Response) => {
                 updatedAt: true,
             },
             orderBy: {
-                createdAt: 'desc',
+                createdAt: 'asc',
             },
         });
 
@@ -125,22 +125,30 @@ export const createStaffAccount = async (req: AuthRequest, res: Response) => {
         });
 
         // If role is doctor, attempt to create linked doctor record safely
-        // Note: Doctor model may not exist in schema - gracefully skipped
         if (formattedRole === 'DOCTOR') {
             try {
-                // Check if Doctor model exists before attempting to create
-                // Uncomment if Doctor model is added to schema:
-                // await prisma.doctor.create({
-                //     data: {
-                //         username: newStaff.username,
-                //         specialty: req.body.specialty || req.body.specialization || 'General Practice',
-                //         isAvailable: true,
-                //     }
-                // });
-                console.log('[Staff Controller] Doctor role assigned to staff account:', newStaff.username);
+                const specialty = req.body.specialty || req.body.specialization || 'General Practice';
+                const experience = req.body.experience ? String(req.body.experience) : '5+ years';
+                const bio = req.body.bio || `Specialist physician at Dr. Amanuel Hospital.`;
+
+                await prisma.doctor.upsert({
+                    where: { username: newStaff.username },
+                    update: {
+                        specialty,
+                        experience,
+                        bio,
+                    },
+                    create: {
+                        username: newStaff.username,
+                        specialty,
+                        experience,
+                        bio,
+                        isAvailable: true,
+                    },
+                });
+                console.log('[Staff Controller] Doctor profile created/updated for staff:', newStaff.username);
             } catch (docError: any) {
-                // Gracefully handle missing table error without breaking staff account creation
-                console.warn('[Staff Controller] Skipped optional doctor record creation:', docError.message);
+                console.warn('[Staff Controller] Doctor record creation error:', docError.message);
             }
         }
 
@@ -171,9 +179,9 @@ export const updateStaffAccount = async (req: AuthRequest, res: Response) => {
         const id = Array.isArray(req.params.id) 
             ? req.params.id[0] 
             : req.params.id;
-        const { username, role, displayName, isActive } = req.body;
+        const { username, role, displayName, isActive, specialty, experience, bio } = req.body;
 
-        if (!id || isNaN(Number(id))) {
+        if (!id) {
             return res.status(400).json({
                 success: false,
                 error: 'Valid staff ID is required',
@@ -196,7 +204,7 @@ export const updateStaffAccount = async (req: AuthRequest, res: Response) => {
         }
 
         const validRoles = ['admin', 'reception', 'cashier', 'doctor', 'laboratory', 'pharmacy', 'staff'];
-        if (!validRoles.includes(role)) {
+        if (!validRoles.includes(role.toLowerCase())) {
             return res.status(400).json({
                 success: false,
                 error: `Invalid role. Must be one of: ${validRoles.join(', ')}`,
@@ -208,7 +216,7 @@ export const updateStaffAccount = async (req: AuthRequest, res: Response) => {
 
         // Check if staff exists
         const existingStaff = await prisma.staffAccount.findUnique({
-            where: { id: Number(id) },
+            where: { id },
         });
 
         if (!existingStaff) {
@@ -234,7 +242,7 @@ export const updateStaffAccount = async (req: AuthRequest, res: Response) => {
 
         // Update staff account
         const updatedStaff = await prisma.staffAccount.update({
-            where: { id: Number(id) },
+            where: { id },
             data: {
                 username: username.toLowerCase().trim(),
                 role: formattedRole,
@@ -251,6 +259,29 @@ export const updateStaffAccount = async (req: AuthRequest, res: Response) => {
                 updatedAt: true,
             },
         });
+
+        // Update or create Doctor profile if role is DOCTOR
+        if (formattedRole === 'DOCTOR') {
+            try {
+                await prisma.doctor.upsert({
+                    where: { username: updatedStaff.username },
+                    update: {
+                        specialty: specialty || 'General Practice',
+                        experience: experience ? String(experience) : undefined,
+                        bio: bio || undefined,
+                    },
+                    create: {
+                        username: updatedStaff.username,
+                        specialty: specialty || 'General Practice',
+                        experience: experience ? String(experience) : '5+ years',
+                        bio: bio || `Specialist physician at Dr. Amanuel Hospital.`,
+                        isAvailable: true,
+                    },
+                });
+            } catch (docErr: any) {
+                console.warn('[Staff Controller] Doctor profile update notice:', docErr.message);
+            }
+        }
 
         return res.json({
             success: true,
@@ -281,7 +312,7 @@ export const resetStaffPassword = async (req: AuthRequest, res: Response) => {
             : req.params.id;
         const { newPassword } = req.body;
 
-        if (!id || isNaN(Number(id))) {
+        if (!id) {
             return res.status(400).json({
                 success: false,
                 error: 'Valid staff ID is required',
@@ -304,7 +335,7 @@ export const resetStaffPassword = async (req: AuthRequest, res: Response) => {
 
         // Check if staff exists
         const existingStaff = await prisma.staffAccount.findUnique({
-            where: { id: Number(id) },
+            where: { id },
         });
 
         if (!existingStaff) {
@@ -319,7 +350,7 @@ export const resetStaffPassword = async (req: AuthRequest, res: Response) => {
 
         // Update password
         await prisma.staffAccount.update({
-            where: { id: Number(id) },
+            where: { id },
             data: {
                 passwordHash,
                 updatedAt: new Date(),
@@ -351,7 +382,7 @@ export const toggleStaffStatus = async (req: AuthRequest, res: Response) => {
             : req.params.id;
         const { isActive } = req.body;
 
-        if (!id || isNaN(Number(id))) {
+        if (!id) {
             return res.status(400).json({
                 success: false,
                 error: 'Valid staff ID is required',
@@ -360,7 +391,7 @@ export const toggleStaffStatus = async (req: AuthRequest, res: Response) => {
 
         // Check if staff exists
         const existingStaff = await prisma.staffAccount.findUnique({
-            where: { id: Number(id) },
+            where: { id },
         });
 
         if (!existingStaff) {
@@ -392,7 +423,7 @@ export const toggleStaffStatus = async (req: AuthRequest, res: Response) => {
 
         // Update status
         const updatedStaff = await prisma.staffAccount.update({
-            where: { id: Number(id) },
+            where: { id },
             data: {
                 isActive: newStatus,
                 updatedAt: new Date(),
@@ -434,18 +465,16 @@ export const deleteStaffAccount = async (req: AuthRequest, res: Response) => {
             ? req.params.id[0] 
             : req.params.id;
 
-        if (!id || isNaN(Number(id))) {
+        if (!id) {
             return res.status(400).json({
                 success: false,
                 error: 'Valid staff ID is required',
             });
         }
 
-        const staffId = parseInt(id, 10);
-
         // Check if staff exists
         const existingStaff = await prisma.staffAccount.findUnique({
-            where: { id: staffId },
+            where: { id },
         });
 
         if (!existingStaff) {
@@ -472,10 +501,20 @@ export const deleteStaffAccount = async (req: AuthRequest, res: Response) => {
             }
         }
 
+        // If staff is doctor, delete linked doctor record first
+        if (existingStaff.role === 'DOCTOR' || existingStaff.role === 'doctor') {
+            try {
+                await prisma.doctor.deleteMany({
+                    where: { username: existingStaff.username },
+                });
+            } catch (docErr: any) {
+                console.warn('[Staff Controller] Cleaned up doctor profile:', docErr.message);
+            }
+        }
+
         // Delete staff account
-        // Note: Database foreign key constraints handle cascading deletion of related records
         await prisma.staffAccount.delete({
-            where: { id: staffId },
+            where: { id },
         });
 
         return res.json({

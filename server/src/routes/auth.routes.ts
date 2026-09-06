@@ -1,7 +1,9 @@
+import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
+const router = Router();
 const prisma = new PrismaClient();
 
 export const login = async (req, res) => {
@@ -46,15 +48,16 @@ export const login = async (req, res) => {
 
     // Generate JWT
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
+      { id: user.id.toString(), username: user.username, role: user.role },
       process.env.JWT_SECRET || 'fallback_secret',
       { expiresIn: '24h' }
     );
 
     console.log('✅ Success: Login successful');
     return res.status(200).json({
+      success: true,
       token,
-      user: { id: user.id, username: user.username, name: user.name, role: user.role }
+      user: { id: user.id.toString(), username: user.username, displayName: user.displayName, role: user.role }
     });
 
   } catch (error) {
@@ -62,3 +65,7 @@ export const login = async (req, res) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+router.post('/login', login);
+
+export default router;

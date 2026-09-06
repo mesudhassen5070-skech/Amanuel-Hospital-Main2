@@ -41,16 +41,16 @@ function DoctorsPage() {
       ? offlineDoctors
       : doctorsList;
 
-  // Merge live database doctors with translations for specialty/experience
-  const translatedDoctorsList = displayedDoctors.map((doc, index) => {
-    // Try to find matching translation by index (since translatedDoctors is indexed)
-    const translation = translatedDoctors[lang]?.[index] || null;
-    
+  // Merge live database doctors with details
+  const translatedDoctorsList = displayedDoctors.map((doc) => {
     return {
       ...doc,
-      specialty: translation?.specialty || doc.specialty || 'General Physician',
-      experience: translation?.experience || `${doc.experience}+ years experience`,
-      availableToday: doc.is_online ?? true, // Use database field instead
+      name: doc.name.startsWith("Dr.") ? doc.name.replace("Dr. ", "") : doc.name,
+      specialty: doc.specialty || 'General Practice',
+      experience: doc.experience
+        ? (typeof doc.experience === 'number' ? `${doc.experience}+ years experience` : String(doc.experience))
+        : '5+ years experience',
+      availableToday: doc.isOnline ?? true,
     };
   });
 
@@ -130,9 +130,20 @@ function DoctorsPage() {
             </div>
           </div>
 
-          {/* Doctor Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {translatedDoctorsList.map((doc, i) => (
+          {/* Doctor Cards Grid / Empty State */}
+          {translatedDoctorsList.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-12 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-center my-8">
+              <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3 text-slate-400">
+                <Calendar className="h-7 w-7" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Doctors Currently Listed</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mt-1">
+                There are currently no specialists registered in the system. When doctors are registered in the Admin Panel, they will appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {translatedDoctorsList.map((doc, i) => (
             <Reveal key={doc.id} delay={(i % 3) * 70}>
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
                 <div>
@@ -211,8 +222,9 @@ function DoctorsPage() {
                 )}
               </div>
             </Reveal>
-          ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
       

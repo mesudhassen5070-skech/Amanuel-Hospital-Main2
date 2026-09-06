@@ -22,81 +22,82 @@ export function useDoctorsPresence() {
   const [doctorsList, setDoctorsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Initial fetch of doctors from database
-  useEffect(() => {
-    const fetchDoctors = async () => {
-      try {
-        setLoading(true);
+  const fetchDoctors = useCallback(async () => {
+    try {
+      setLoading(true);
 
-        // Fetch doctors directly from database
-        const { data, error } = await supabase
-          .from("staff_accounts")
-          .select("id, display_name, username, role, is_active, is_online, last_seen")
-          .eq("role", "doctor");
+      // 1. Primary approach: Fetch from Express backend API
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+      const response = await fetch(`${API_URL}/api/doctors`);
 
-        if (error) {
-          console.error("Database error fetching doctors:", error);
-          throw new Error(`Database error: ${error.message}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && Array.isArray(result.doctors)) {
+          console.log("[Doctors Hook] Loaded live doctors from Express API:", result.doctors);
+          setDoctorsList(result.doctors);
+          setLoading(false);
+          return;
         }
-
-        console.log("Fetched doctors from database:", data);
-
-        if (data && data.length > 0) {
-          // Map database doctors to the expected format
-          const doctorsFromDB = data.map((doc: any) => ({
-            id: doc.id.toString(),
-            name: doc.display_name || doc.username,
-            specialty: "General Practitioner", // Default specialty
-            experience: 10, // Default experience
-            isOnline: Boolean(doc.is_online),
-            photo: "/doctor1.jpg", // Use existing photo from public directory
-          }));
-
-          console.log("Mapped doctors with online status:", doctorsFromDB);
-          setDoctorsList(doctorsFromDB);
-        } else {
-          console.log("No doctors in database, falling back to static data");
-          // Fall back to static data if no doctors in database
-          setDoctorsList(doctors);
-        }
-      } catch (err) {
-        console.error("Error fetching doctors:", err);
-        // Fall back to static data on error
-        setDoctorsList(doctors);
-      } finally {
-        setLoading(false);
       }
-    };
 
+      console.warn("[Doctors Hook] Backend API call failed, attempting Supabase fallback...");
+
+      // 2. Fallback: Fetch directly from Supabase database
+      const { data, error } = await supabase
+        .from("staff_accounts")
+        .select("id, display_name, username, role, is_active, is_online, last_seen")
+        .eq("role", "doctor")
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        console.error("Database error fetching doctors from Supabase:", error);
+        setDoctorsList([]);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const photos = ["/doctor1.jpg", "/doctor2.jpg", "/doctor3.jpg"];
+        const doctorsFromDB = data.map((doc: any, i: number) => ({
+          id: doc.id.toString(),
+          name: doc.display_name || doc.username,
+          specialty: "General Practice",
+          experience: "5+ years experience",
+          bio: "Specialist physician at Dr. Amanuel Hospital.",
+          isOnline: Boolean(doc.is_online),
+          photo: photos[i % photos.length],
+        }));
+
+        setDoctorsList(doctorsFromDB);
+      } else {
+        setDoctorsList([]);
+      }
+    } catch (err) {
+      console.error("Error fetching doctors:", err);
+      setDoctorsList([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Initial fetch and Realtime subscription
+  useEffect(() => {
     fetchDoctors();
 
-    // Subscribe to Supabase Realtime for staff_accounts UPDATE events
+    // Subscribe to Supabase Realtime for staff_accounts INSERT, UPDATE, DELETE events
     const channel = supabase
-      .channel('doctors-presence')
+      .channel('doctors-presence-channel')
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'staff_accounts',
           filter: 'role=eq.doctor',
         },
         (payload) => {
-          console.log('Doctor presence UPDATE detected:', payload);
-          const updatedDoc = payload.new as any;
-
-          // Update local state dynamically from the payload
-          setDoctorsList(prev => {
-            return prev.map(doc => {
-              if (doc.id === updatedDoc.id.toString()) {
-                return {
-                  ...doc,
-                  isOnline: Boolean(updatedDoc.is_online),
-                };
-              }
-              return doc;
-            });
-          });
+          console.log('Doctor DB change detected:', payload.eventType, payload);
+          // Re-fetch doctor list whenever a doctor is added, updated, or removed in Admin
+          fetchDoctors();
         }
       )
       .subscribe();
@@ -104,7 +105,7 @@ export function useDoctorsPresence() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchDoctors]);
 
   const onlineDoctors = doctorsList.filter((doc) => doc.isOnline);
   const offlineDoctors = doctorsList.filter((doc) => !doc.isOnline);
@@ -114,32 +115,7 @@ export function useDoctorsPresence() {
     onlineDoctors,
     offlineDoctors,
     loading,
-    refresh: () => {
-      // Manual refresh function if needed
-      setLoading(true);
-      supabase
-        .from("staff_accounts")
-        .select("id, display_name, username, role, is_active, is_online, last_seen")
-        .eq("role", "doctor")
-        .then(({ data, error }) => {
-          if (error) {
-            console.error("Database error fetching doctors:", error);
-            return;
-          }
-          if (data && data.length > 0) {
-            const doctorsFromDB = data.map((doc: any) => ({
-              id: doc.id.toString(),
-              name: doc.display_name || doc.username,
-              specialty: "General Practitioner",
-              experience: 10,
-              isOnline: Boolean(doc.is_online),
-              photo: "/doctor1.jpg",
-            }));
-            setDoctorsList(doctorsFromDB);
-          }
-          setLoading(false);
-        });
-    },
+    refresh: fetchDoctors,
   };
 }
 

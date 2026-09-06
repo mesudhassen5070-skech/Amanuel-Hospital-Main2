@@ -7,6 +7,7 @@ import healthRoutes from "./routes/health.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import staffRoutes from "./routes/staff.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
+import doctorRoutes from "./routes/doctors.routes.js";
 import { setupCallSockets } from "./sockets/call.socket.js";
 import { prisma } from "./config/db.js";
 
@@ -61,6 +62,11 @@ app.use("/api/auth", authRoutes);
 
 // Staff Management Routes
 app.use("/api/staff", staffRoutes);
+
+// Doctors Showcase Routes
+app.use("/api/doctors", doctorRoutes);
+
+// Payment Processing Routes
 
 // Payment Processing Routes
 app.use("/api/payments", paymentRoutes);

@@ -11,7 +11,7 @@ import { apiFetch, handleApiResponse } from "./client";
 // ══════════════════════════════════════════════════════════════════════════════
 
 export interface StaffAccount {
-  id: number;
+  id: string | number;
   username: string;
   role: string;
   displayName: string | null;
@@ -20,6 +20,9 @@ export interface StaffAccount {
   lastSeen: string | null;
   createdAt: string;
   updatedAt: string;
+  specialty?: string;
+  experience?: string;
+  bio?: string;
 }
 
 export interface CreateStaffData {
@@ -28,6 +31,9 @@ export interface CreateStaffData {
   role: string;
   displayName: string;
   isActive: boolean;
+  specialty?: string;
+  experience?: string;
+  bio?: string;
 }
 
 export interface UpdateStaffData {
@@ -35,6 +41,9 @@ export interface UpdateStaffData {
   role: string;
   displayName: string;
   isActive: boolean;
+  specialty?: string;
+  experience?: string;
+  bio?: string;
 }
 
 export interface ResetPasswordData {
@@ -80,7 +89,7 @@ export const createStaffAccount = async (data: CreateStaffData): Promise<StaffAc
  * PUT /api/staff/:id
  * Update staff account details
  */
-export const updateStaffAccount = async (id: number, data: UpdateStaffData): Promise<StaffAccount> => {
+export const updateStaffAccount = async (id: string | number, data: UpdateStaffData): Promise<StaffAccount> => {
   const response = await apiFetch(`/api/staff/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
@@ -94,7 +103,7 @@ export const updateStaffAccount = async (id: number, data: UpdateStaffData): Pro
  * PUT /api/staff/:id/password
  * Reset staff password
  */
-export const resetStaffPassword = async (id: number, data: ResetPasswordData): Promise<void> => {
+export const resetStaffPassword = async (id: string | number, data: ResetPasswordData): Promise<void> => {
   const response = await apiFetch(`/api/staff/${id}/password`, {
     method: "PUT",
     body: JSON.stringify(data),
@@ -107,7 +116,7 @@ export const resetStaffPassword = async (id: number, data: ResetPasswordData): P
  * PATCH /api/staff/:id/status
  * Toggle staff active status
  */
-export const toggleStaffStatus = async (id: number, data?: ToggleStatusData): Promise<StaffAccount> => {
+export const toggleStaffStatus = async (id: string | number, data?: ToggleStatusData): Promise<StaffAccount> => {
   const response = await apiFetch(`/api/staff/${id}/status`, {
     method: "PATCH",
     body: JSON.stringify(data || {}),
@@ -121,7 +130,7 @@ export const toggleStaffStatus = async (id: number, data?: ToggleStatusData): Pr
  * DELETE /api/staff/:id
  * Delete staff account with cascading cleanup
  */
-export const deleteStaffAccount = async (id: number): Promise<void> => {
+export const deleteStaffAccount = async (id: string | number): Promise<void> => {
   const response = await apiFetch(`/api/staff/${id}`, {
     method: "DELETE",
   });

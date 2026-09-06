@@ -26,8 +26,11 @@ export function AddStaffModal({ isOpen, onClose, onSuccess }: AddStaffModalProps
     username: "",
     password: "",
     confirmPassword: "",
-    role: "staff",
+    role: "doctor",
     isActive: true,
+    specialty: "General Practice",
+    experience: "5+ years",
+    bio: "",
   });
   const [loading, setLoading] = useState(false);
 
@@ -68,6 +71,9 @@ export function AddStaffModal({ isOpen, onClose, onSuccess }: AddStaffModalProps
         role: formData.role,
         displayName: formData.displayName.trim(),
         isActive: formData.isActive,
+        specialty: formData.role === 'doctor' ? formData.specialty : undefined,
+        experience: formData.role === 'doctor' ? formData.experience : undefined,
+        bio: formData.role === 'doctor' ? formData.bio : undefined,
       });
       toast.success("Staff account created successfully");
       // Reset form
@@ -76,8 +82,11 @@ export function AddStaffModal({ isOpen, onClose, onSuccess }: AddStaffModalProps
         username: "",
         password: "",
         confirmPassword: "",
-        role: "staff",
+        role: "doctor",
         isActive: true,
+        specialty: "General Practice",
+        experience: "5+ years",
+        bio: "",
       });
       onSuccess();
       onClose();
@@ -95,8 +104,11 @@ export function AddStaffModal({ isOpen, onClose, onSuccess }: AddStaffModalProps
         username: "",
         password: "",
         confirmPassword: "",
-        role: "staff",
+        role: "doctor",
         isActive: true,
+        specialty: "General Practice",
+        experience: "5+ years",
+        bio: "",
       });
       onClose();
     }
@@ -104,14 +116,14 @@ export function AddStaffModal({ isOpen, onClose, onSuccess }: AddStaffModalProps
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-md rounded-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-display">
             <UserPlus className="h-5 w-5 text-primary" />
-            Create Staff Account
+            Create Staff / Doctor Account
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Add a new staff member to the hospital system
+            Add a new staff member or doctor to the hospital system
           </DialogDescription>
         </DialogHeader>
 
@@ -125,7 +137,7 @@ export function AddStaffModal({ isOpen, onClose, onSuccess }: AddStaffModalProps
               id="displayName"
               value={formData.displayName}
               onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-              placeholder="Enter staff member's full name"
+              placeholder="Enter full name (e.g. Dr. Samuel Bekele)"
               className="rounded-xl"
               disabled={loading}
             />
@@ -140,7 +152,7 @@ export function AddStaffModal({ isOpen, onClose, onSuccess }: AddStaffModalProps
               id="username"
               value={formData.username}
               onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase() })}
-              placeholder="Enter username (lowercase)"
+              placeholder="Enter username (lowercase, e.g. drsamuel)"
               className="rounded-xl font-mono text-sm"
               disabled={loading}
             />
@@ -161,15 +173,66 @@ export function AddStaffModal({ isOpen, onClose, onSuccess }: AddStaffModalProps
               className="w-full h-10 px-3 rounded-xl border border-input bg-background text-xs font-semibold outline-none"
               disabled={loading}
             >
+              <option value="doctor">Doctor</option>
               <option value="staff">Staff</option>
               <option value="reception">Reception</option>
               <option value="cashier">Cashier</option>
-              <option value="doctor">Doctor</option>
               <option value="laboratory">Laboratory</option>
               <option value="pharmacy">Pharmacy</option>
               <option value="admin">Admin</option>
             </select>
           </div>
+
+          {/* Doctor-specific fields */}
+          {formData.role === "doctor" && (
+            <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900 rounded-xl space-y-3">
+              <p className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                Doctor Profile Info (Displayed on Public Doctor Page)
+              </p>
+              
+              <div className="space-y-1">
+                <Label htmlFor="specialty" className="text-xs font-semibold">
+                  Medical Specialty
+                </Label>
+                <Input
+                  id="specialty"
+                  value={formData.specialty}
+                  onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
+                  placeholder="e.g. Cardiologist, Neurologist, General Practice"
+                  className="rounded-xl bg-white dark:bg-slate-900"
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="experience" className="text-xs font-semibold">
+                  Years of Experience
+                </Label>
+                <Input
+                  id="experience"
+                  value={formData.experience}
+                  onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                  placeholder="e.g. 8+ years"
+                  className="rounded-xl bg-white dark:bg-slate-900"
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="bio" className="text-xs font-semibold">
+                  Bio / Summary
+                </Label>
+                <Input
+                  id="bio"
+                  value={formData.bio}
+                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                  placeholder="Brief summary of expertise..."
+                  className="rounded-xl bg-white dark:bg-slate-900"
+                  disabled={loading}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Password */}
           <div className="space-y-1.5">

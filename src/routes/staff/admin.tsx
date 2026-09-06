@@ -73,7 +73,7 @@ export const Route = createFileRoute("/staff/admin")({
 });
 
 type StaffAccount = {
-  id: number;
+  id: number | string;
   username: string;
   role: string;
   displayName: string | null;
