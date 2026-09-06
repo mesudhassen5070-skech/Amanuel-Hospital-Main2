@@ -27,26 +27,29 @@ export function useDoctorsPresence() {
       setLoading(true);
 
       // 1. Primary approach: Fetch from Express backend API
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
-      const response = await fetch(`${API_URL}/api/doctors`);
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+        const response = await fetch(`${API_URL}/api/doctors`);
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && Array.isArray(result.doctors)) {
-          console.log("[Doctors Hook] Loaded live doctors from Express API:", result.doctors);
-          setDoctorsList(result.doctors);
-          setLoading(false);
-          return;
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && Array.isArray(result.doctors) && result.doctors.length > 0) {
+            console.log("[Doctors Hook] Loaded live doctors from Express API:", result.doctors);
+            setDoctorsList(result.doctors);
+            setLoading(false);
+            return;
+          }
         }
+      } catch (apiErr) {
+        console.warn("[Doctors Hook] Backend API call failed, using Supabase fallback...");
       }
 
-      console.warn("[Doctors Hook] Backend API call failed, attempting Supabase fallback...");
-
-      // 2. Fallback: Fetch directly from Supabase database
+      // 2. Fallback: Fetch directly from Supabase database (handles both 'DOCTOR' and 'doctor')
       const { data, error } = await supabase
         .from("staff_accounts")
         .select("id, display_name, username, role, is_active, is_online, last_seen")
-        .eq("role", "doctor")
+        .in("role", ["DOCTOR", "doctor", "Doctor"])
+        .eq("is_active", true)
         .order("created_at", { ascending: true });
 
       if (error) {
@@ -56,16 +59,42 @@ export function useDoctorsPresence() {
       }
 
       if (data && data.length > 0) {
+        // Attempt to fetch profile info from doctor table in Supabase
+        let profilesMap: Record<string, any> = {};
+        try {
+          const usernames = data.map((d: any) => d.username);
+          const { data: profData } = await supabase
+            .from("doctor")
+            .select("username, specialty, experience, bio, is_available")
+            .in("username", usernames);
+
+          if (profData && profData.length > 0) {
+            profData.forEach((p: any) => {
+              if (p.username) {
+                profilesMap[p.username.toLowerCase()] = p;
+              }
+            });
+          }
+        } catch (profErr) {
+          // Ignore if optional doctor table query fails
+        }
+
         const photos = ["/doctor1.jpg", "/doctor2.jpg", "/doctor3.jpg"];
-        const doctorsFromDB = data.map((doc: any, i: number) => ({
-          id: doc.id.toString(),
-          name: doc.display_name || doc.username,
-          specialty: "General Practice",
-          experience: "5+ years experience",
-          bio: "Specialist physician at Dr. Amanuel Hospital.",
-          isOnline: Boolean(doc.is_online),
-          photo: photos[i % photos.length],
-        }));
+        const doctorsFromDB = data.map((doc: any, i: number) => {
+          const prof = profilesMap[doc.username?.toLowerCase()] || {};
+          return {
+            id: doc.id.toString(),
+            username: doc.username,
+            name: doc.display_name || doc.username,
+            specialty: prof.specialty || "General Practice",
+            experience: prof.experience || "5+ years experience",
+            bio: prof.bio || "Specialist physician at Dr. Amanuel Hospital.",
+            isOnline: Boolean(doc.is_online),
+            isAvailable: prof.is_available ?? true,
+            photo: photos[i % photos.length],
+            lastSeen: doc.last_seen,
+          };
+        });
 
         setDoctorsList(doctorsFromDB);
       } else {
@@ -92,10 +121,9 @@ export function useDoctorsPresence() {
           event: '*',
           schema: 'public',
           table: 'staff_accounts',
-          filter: 'role=eq.doctor',
         },
         (payload) => {
-          console.log('Doctor DB change detected:', payload.eventType, payload);
+          console.log('Staff DB change detected:', payload.eventType, payload);
           // Re-fetch doctor list whenever a doctor is added, updated, or removed in Admin
           fetchDoctors();
         }

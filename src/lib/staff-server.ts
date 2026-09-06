@@ -1295,7 +1295,7 @@ export const updateDoctorOnlineStatus = createServerFn({ method: "POST" })
       .from("staff_accounts")
       .update(updateData)
       .eq("username", data.username.toLowerCase())
-      .eq("role", "doctor");
+      .in("role", ["DOCTOR", "doctor"]);
 
     if (error) {
       throw new Error(`Database error: ${error.message}. Failed to update doctor online status.`);
